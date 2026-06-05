@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
+import Scanner from "./Scanner";
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
 const FIELDS = [
@@ -50,6 +51,30 @@ function QRCanvas({ data, size = 180 }) {
     mark(0, 0); mark((N - 7) * cell, 0); mark(0, (N - 7) * cell);
   }, [data, size]);
   return <canvas ref={ref} style={{ borderRadius: 6 }} />;
+}
+
+// ─── REAL QR CODE GENERATOR ────────────────────────────────────────────────────
+function RealQR({ data, size = 200 }) {
+  const ref = useRef();
+  useEffect(() => {
+    if (!ref.current || !data) return;
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    script.onload = () => {
+      ref.current.innerHTML = "";
+      new window.QRCode(ref.current, {
+        text: data,
+        width: size,
+        height: size,
+        colorDark: "#1a1714",
+        colorLight: "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.M,
+      });
+    };
+    document.head.appendChild(script);
+    return () => { if (document.head.contains(script)) document.head.removeChild(script); };
+  }, [data, size]);
+  return <div ref={ref} style={{ borderRadius: 6, overflow: "hidden", display: "inline-block" }} />;
 }
 
 // ─── STYLES ────────────────────────────────────────────────────────────────────
@@ -150,6 +175,7 @@ const Icon = ({ name, size = 16 }) => {
     search: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
     arrow: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
     shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+    camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -185,10 +211,7 @@ function AuthScreen({ onLogin }) {
     if (!form.email || !form.senha) { setError("Preencha e-mail e senha."); setLoading(false); return; }
     if (form.senha.length < 6) { setError("Senha mínima de 6 caracteres."); setLoading(false); return; }
     const newUser = {
-      id: `u${Date.now()}`,
-      tipo,
-      email: form.email,
-      senha: form.senha,
+      id: `u${Date.now()}`, tipo, email: form.email, senha: form.senha,
       ...(tipo === "cliente"
         ? { nome: form.nome || "", sobrenome: form.sobrenome || "", cpf: "", rg: "", nascimento: "", telefone: "", cep: "", endereco: "", cidade: "", estado: "", compartilhar: { nome: true, sobrenome: true, cpf: true, rg: false, nascimento: true, telefone: true, email: true, cep: false, endereco: false, cidade: true, estado: true } }
         : { nome_empresa: form.nomeEmpresa || "", cnpj: form.cnpj || "", segmento: form.segmento || "outro", plano: "free" }),
@@ -307,10 +330,7 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
 
   const salvar = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("users")
-      .update({ ...perfil, compartilhar })
-      .eq("id", user.id);
+    const { error } = await supabase.from("users").update({ ...perfil, compartilhar }).eq("id", user.id);
     if (!error) {
       const updatedUser = { ...user, ...perfil, compartilhar };
       Session.save(updatedUser);
@@ -339,7 +359,6 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
           </button>
         </div>
       </div>
-
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px" }}>
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="tab-bar">
@@ -393,7 +412,7 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
                 ) : (
                   <>
                     <div style={{ background: "#f8f8f6", border: "1px solid var(--border)", borderRadius: 12, padding: 24, textAlign: "center" }}>
-                      <QRCanvas data={qrData} size={200} />
+                      <RealQR data={qrData} size={200} />
                       <div style={{ marginTop: 12, fontWeight: 600, fontSize: 15 }}>{perfil.nome} {perfil.sobrenome}</div>
                       <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>Apresente para a empresa escanear</div>
                     </div>
@@ -441,7 +460,7 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
 function EmpresaApp({ user, onLogout }) {
   const [nav, setNav] = useState("dashboard");
   const [records, setRecords] = useState([]);
-  const [scanning, setScanning] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [savedScan, setSavedScan] = useState(false);
   const [busca, setBusca] = useState("");
@@ -449,28 +468,20 @@ function EmpresaApp({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("registros")
-      .select("*")
-      .eq("empresa_id", user.id)
+    supabase.from("registros").select("*").eq("empresa_id", user.id)
       .order("criado_em", { ascending: false })
       .then(({ data }) => { setRecords(data || []); setLoading(false); });
   }, [user.id]);
 
-  const simularScan = async () => {
-    setScanning(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const { data: clientes } = await supabase
-      .from("users")
-      .select("*")
-      .eq("tipo", "cliente")
-      .not("nome", "is", null);
-    if (!clientes || clientes.length === 0) { setScanning(false); return; }
-    const c = clientes[Math.floor(Math.random() * clientes.length)];
-    const dados = { _uid: c.id };
-    FIELDS.forEach(f => { if ((c.compartilhar?.[f.key] ?? true) && c[f.key]) dados[f.key] = c[f.key]; });
-    setScanResult(dados);
-    setScanning(false);
+  const handleScanResult = (raw) => {
+    setShowScanner(false);
+    try {
+      const dados = JSON.parse(raw);
+      setScanResult(dados);
+      setNav("scanner");
+    } catch {
+      alert("QR code inválido.");
+    }
   };
 
   const salvarRegistro = async () => {
@@ -506,6 +517,8 @@ function EmpresaApp({ user, onLogout }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: "var(--bg)" }}>
+      {showScanner && <Scanner onResult={handleScanResult} onClose={() => setShowScanner(false)} />}
+
       <div className="sidebar">
         <div style={{ padding: "20px 16px 12px" }}>
           <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22 }}>Ficha<span style={{ color: "var(--accent2)" }}>ID</span></div>
@@ -572,7 +585,7 @@ function EmpresaApp({ user, onLogout }) {
                   </div>
                 )}
               </div>
-              <button className="btn btn-dark" onClick={() => setNav("scanner")}><Icon name="scan" size={14} /> Escanear novo cliente</button>
+              <button className="btn btn-dark" onClick={() => setShowScanner(true)}><Icon name="camera" size={14} /> Escanear cliente</button>
             </div>
           )}
 
@@ -582,12 +595,10 @@ function EmpresaApp({ user, onLogout }) {
               <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24 }}>Leia o QR code do cliente para cadastrá-lo automaticamente.</div>
               {!scanResult ? (
                 <div>
-                  <div className={`scan-zone ${scanning ? "active" : ""}`} onClick={!scanning ? simularScan : undefined}>
-                    {scanning ? (
-                      <><div style={{ fontSize: 36, marginBottom: 12 }}>◈</div><div style={{ fontSize: 14, fontWeight: 500 }}>Lendo QR code...</div></>
-                    ) : (
-                      <><div style={{ marginBottom: 12, color: "var(--text2)" }}><Icon name="scan" size={36} /></div><div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Clique para simular scan</div><div style={{ fontSize: 13, color: "var(--text2)" }}>Em produção: usa a câmera do celular</div></>
-                    )}
+                  <div className="scan-zone" onClick={() => setShowScanner(true)}>
+                    <div style={{ marginBottom: 12, color: "var(--text2)" }}><Icon name="camera" size={36} /></div>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Abrir câmera</div>
+                    <div style={{ fontSize: 13, color: "var(--text2)" }}>Aponte para o QR code do cliente</div>
                   </div>
                   <div style={{ marginTop: 20, background: "var(--surface2)", borderRadius: 8, padding: "12px 16px", fontSize: 12, color: "var(--text2)", lineHeight: 1.6 }}>
                     <strong style={{ color: "var(--text)" }}>Como funciona:</strong> O cliente abre o FichaID no celular, exibe o QR, e a empresa escaneia. Os dados chegam preenchidos automaticamente — sem papel, sem erros.
@@ -630,7 +641,7 @@ function EmpresaApp({ user, onLogout }) {
                   <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28 }}>Clientes</h1>
                   <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} cadastrados</div>
                 </div>
-                <button className="btn btn-dark" onClick={() => setNav("scanner")}><Icon name="plus" size={14} /> Novo scan</button>
+                <button className="btn btn-dark" onClick={() => setShowScanner(true)}><Icon name="camera" size={14} /> Escanear</button>
               </div>
               <div style={{ position: "relative", marginBottom: 16 }}>
                 <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text3)" }}><Icon name="search" size={14} /></div>
