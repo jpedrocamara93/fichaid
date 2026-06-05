@@ -26,32 +26,6 @@ const Session = {
   clear() { localStorage.removeItem("fid_session"); },
 };
 
-// ─── QR CANVAS ─────────────────────────────────────────────────────────────────
-function QRCanvas({ data, size = 180 }) {
-  const ref = useRef();
-  useEffect(() => {
-    if (!ref.current || !data) return;
-    const c = ref.current, ctx = c.getContext("2d");
-    c.width = size; c.height = size;
-    const N = 25, cell = size / N;
-    const hash = Array.from(data).reduce((a, ch) => a + ch.charCodeAt(0), 0);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size, size);
-    const get = (i, j) => {
-      const idx = i * N + j;
-      return ((data.charCodeAt(idx % data.length) + i * 7 + j * 13 + hash) % 3) !== 0;
-    };
-    for (let i = 0; i < N; i++)
-      for (let j = 0; j < N; j++)
-        if (get(i, j)) { ctx.fillStyle = "#0a0a0a"; ctx.fillRect(j * cell, i * cell, cell - 0.5, cell - 0.5); }
-    const mark = (x, y) => {
-      ctx.fillStyle = "#0a0a0a"; ctx.fillRect(x, y, cell * 7, cell * 7);
-      ctx.fillStyle = "#fff"; ctx.fillRect(x + cell, y + cell, cell * 5, cell * 5);
-      ctx.fillStyle = "#0a0a0a"; ctx.fillRect(x + cell * 2, y + cell * 2, cell * 3, cell * 3);
-    };
-    mark(0, 0); mark((N - 7) * cell, 0); mark(0, (N - 7) * cell);
-  }, [data, size]);
-  return <canvas ref={ref} style={{ borderRadius: 6 }} />;
-}
 
 // ─── REAL QR CODE GENERATOR ────────────────────────────────────────────────────
 function RealQR({ data, size = 200 }) {

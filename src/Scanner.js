@@ -21,7 +21,7 @@ export default function Scanner({ onResult, onClose }) {
     return function() {
       scanner.stop().catch(function() {});
     };
-  }, []);
+  }, [onResult]);
 
   return (
     <div style={{
