@@ -1,51 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-
-// ─── STORAGE LAYER (localStorage) ─────────────────────────────────────────────
-const DB = {
-  get(key) {
-    try { return JSON.parse(localStorage.getItem(key)); }
-    catch { return null; }
-  },
-  set(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
-    catch { return false; }
-  },
-  getUsers() { return DB.get("fid_users") || []; },
-  saveUsers(u) { return DB.set("fid_users", u); },
-  getRecords(empresaId) { return DB.get(`fid_records_${empresaId}`) || []; },
-  saveRecords(empresaId, r) { return DB.set(`fid_records_${empresaId}`, r); },
-  getSession() { return DB.get("fid_session"); },
-  saveSession(u) { return DB.set("fid_session", u); },
-  clearSession() { localStorage.removeItem("fid_session"); },
-};
-
-// ─── SEED DEMO DATA ────────────────────────────────────────────────────────────
-function seedDemo() {
-  const users = DB.getUsers();
-  if (users.length > 0) return;
-  const demo = [
-    {
-      id: "u1", tipo: "cliente", email: "joao@demo.com", senha: "123456",
-      nome: "João Pedro", sobrenome: "Silva", cpf: "123.456.789-00", rg: "12.345.678-9",
-      nascimento: "1990-05-15", telefone: "(11) 98765-4321", email2: "joao@demo.com",
-      cep: "01310-100", endereco: "Av. Paulista, 1000", cidade: "São Paulo", estado: "SP",
-      compartilhar: { nome: true, sobrenome: true, cpf: true, rg: false, nascimento: true, telefone: true, email: true, cep: false, endereco: false, cidade: true, estado: true }
-    },
-    {
-      id: "e1", tipo: "empresa", email: "empresa@demo.com", senha: "123456",
-      nomeEmpresa: "Clínica Bem Estar", cnpj: "12.345.678/0001-99", segmento: "hospital", plano: "pro"
-    },
-  ];
-  DB.saveUsers(demo);
-  const records = [
-    { id: "r1", nome: "João Pedro", sobrenome: "Silva", cpf: "123.456.789-00", email: "joao@demo.com", telefone: "(11) 98765-4321", cidade: "São Paulo", nascimento: "1990-05-15", _ts: new Date(Date.now() - 86400000 * 2).toISOString() },
-    { id: "r2", nome: "Maria", sobrenome: "Oliveira", cpf: "987.654.321-00", email: "maria@email.com", telefone: "(21) 99988-7766", cidade: "Rio de Janeiro", nascimento: "1985-11-20", _ts: new Date(Date.now() - 86400000 * 5).toISOString() },
-    { id: "r3", nome: "Carlos", sobrenome: "Mendes", cpf: "456.123.789-00", email: "carlos@email.com", telefone: "(31) 97654-3210", cidade: "Belo Horizonte", nascimento: "1978-03-08", _ts: new Date(Date.now() - 86400000 * 8).toISOString() },
-    { id: "r4", nome: "Ana", sobrenome: "Costa", cpf: "321.654.987-00", email: "ana@email.com", telefone: "(11) 96543-2109", cidade: "São Paulo", nascimento: "1995-07-30", _ts: new Date(Date.now() - 86400000 * 1).toISOString() },
-    { id: "r5", nome: "Pedro", sobrenome: "Rocha", cpf: "654.321.098-00", email: "pedro@email.com", telefone: "(47) 95432-1098", cidade: "Joinville", nascimento: "1992-09-14", _ts: new Date(Date.now() - 86400000 * 12).toISOString() },
-  ];
-  DB.saveRecords("e1", records);
-}
+import { supabase } from "./supabase";
 
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
 const FIELDS = [
@@ -63,6 +17,13 @@ const FIELDS = [
 ];
 
 const SEGMENTOS = ["hotel", "loja", "hospital", "clínica", "academia", "restaurante", "outro"];
+
+// ─── SESSION ───────────────────────────────────────────────────────────────────
+const Session = {
+  get() { try { return JSON.parse(localStorage.getItem("fid_session")); } catch { return null; } },
+  save(u) { localStorage.setItem("fid_session", JSON.stringify(u)); },
+  clear() { localStorage.removeItem("fid_session"); },
+};
 
 // ─── QR CANVAS ─────────────────────────────────────────────────────────────────
 function QRCanvas({ data, size = 180 }) {
@@ -206,30 +167,36 @@ function AuthScreen({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoading(true); setError("");
-    const users = DB.getUsers();
-    const user = users.find(u => u.email === form.email && u.senha === form.senha);
-    if (!user) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
-    DB.saveSession(user);
-    onLogin(user);
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", form.email)
+      .eq("senha", form.senha)
+      .single();
+    if (error || !data) { setError("E-mail ou senha incorretos."); setLoading(false); return; }
+    Session.save(data);
+    onLogin(data);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setLoading(true); setError("");
     if (!form.email || !form.senha) { setError("Preencha e-mail e senha."); setLoading(false); return; }
     if (form.senha.length < 6) { setError("Senha mínima de 6 caracteres."); setLoading(false); return; }
-    const users = DB.getUsers();
-    if (users.find(u => u.email === form.email)) { setError("E-mail já cadastrado."); setLoading(false); return; }
     const newUser = {
-      id: `u${Date.now()}`, tipo, email: form.email, senha: form.senha,
+      id: `u${Date.now()}`,
+      tipo,
+      email: form.email,
+      senha: form.senha,
       ...(tipo === "cliente"
         ? { nome: form.nome || "", sobrenome: form.sobrenome || "", cpf: "", rg: "", nascimento: "", telefone: "", cep: "", endereco: "", cidade: "", estado: "", compartilhar: { nome: true, sobrenome: true, cpf: true, rg: false, nascimento: true, telefone: true, email: true, cep: false, endereco: false, cidade: true, estado: true } }
-        : { nomeEmpresa: form.nomeEmpresa || "", cnpj: form.cnpj || "", segmento: form.segmento || "outro", plano: "free" }),
+        : { nome_empresa: form.nomeEmpresa || "", cnpj: form.cnpj || "", segmento: form.segmento || "outro", plano: "free" }),
     };
-    DB.saveUsers([...users, newUser]);
-    DB.saveSession(newUser);
-    onLogin(newUser);
+    const { data, error } = await supabase.from("users").insert([newUser]).select().single();
+    if (error) { setError(error.message.includes("duplicate") ? "E-mail já cadastrado." : "Erro ao criar conta."); setLoading(false); return; }
+    Session.save(data);
+    onLogin(data);
   };
 
   if (mode === "login") return (
@@ -255,11 +222,6 @@ function AuthScreen({ onLogin }) {
           <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "var(--text2)" }}>
             Não tem conta?{" "}
             <span style={{ color: "var(--accent)", cursor: "pointer", fontWeight: 500 }} onClick={() => setMode("choose")}>Cadastrar</span>
-          </div>
-          <div style={{ marginTop: 20, padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, fontSize: 11, color: "var(--text2)", lineHeight: 1.7 }}>
-            <strong style={{ color: "var(--text)" }}>Demo:</strong><br />
-            Cliente: joao@demo.com / 123456<br />
-            Empresa: empresa@demo.com / 123456
           </div>
         </div>
       </div>
@@ -339,18 +301,24 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
   const [compartilhar, setCompartilhar] = useState(user.compartilhar || {});
   const [qrData, setQrData] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const camposShared = FIELDS.filter(f => compartilhar[f.key] && perfil[f.key]);
 
-  const salvar = () => {
-    const users = DB.getUsers();
-    const updated = users.map(u => u.id === user.id ? { ...u, ...perfil, compartilhar } : u);
-    DB.saveUsers(updated);
-    const updatedUser = { ...user, ...perfil, compartilhar };
-    DB.saveSession(updatedUser);
-    onUpdateUser(updatedUser);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const salvar = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("users")
+      .update({ ...perfil, compartilhar })
+      .eq("id", user.id);
+    if (!error) {
+      const updatedUser = { ...user, ...perfil, compartilhar };
+      Session.save(updatedUser);
+      onUpdateUser(updatedUser);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+    setSaving(false);
   };
 
   const gerarQR = () => {
@@ -406,8 +374,8 @@ function ClienteApp({ user, onLogout, onUpdateUser }) {
                   <div><label className="label">Estado</label><input className="input" value={perfil.estado || ""} onChange={e => setPerfil(p => ({ ...p, estado: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
-                  <button className="btn btn-dark" style={{ flex: 1 }} onClick={salvar}>
-                    {saved ? <><Icon name="check" size={14} /> Salvo!</> : "Salvar dados"}
+                  <button className="btn btn-dark" style={{ flex: 1 }} onClick={salvar} disabled={saving}>
+                    {saved ? <><Icon name="check" size={14} /> Salvo!</> : saving ? "Salvando..." : "Salvar dados"}
                   </button>
                   <button className="btn btn-ghost" style={{ flex: 1 }} onClick={gerarQR} disabled={!perfil.nome || !perfil.cpf}>Gerar QR →</button>
                 </div>
@@ -478,42 +446,56 @@ function EmpresaApp({ user, onLogout }) {
   const [savedScan, setSavedScan] = useState(false);
   const [busca, setBusca] = useState("");
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setRecords(DB.getRecords(user.id));
+    supabase
+      .from("registros")
+      .select("*")
+      .eq("empresa_id", user.id)
+      .order("criado_em", { ascending: false })
+      .then(({ data }) => { setRecords(data || []); setLoading(false); });
   }, [user.id]);
 
-  const simularScan = () => {
+  const simularScan = async () => {
     setScanning(true);
-    setTimeout(() => {
-      const users = DB.getUsers();
-      const clientes = users.filter(u => u.tipo === "cliente" && u.nome && u.cpf);
-      if (clientes.length === 0) { setScanning(false); return; }
-      const c = clientes[Math.floor(Math.random() * clientes.length)];
-      const dados = { _uid: c.id };
-      FIELDS.forEach(f => { if ((c.compartilhar?.[f.key] ?? true) && c[f.key]) dados[f.key] = c[f.key]; });
-      setScanResult(dados);
-      setScanning(false);
-    }, 1200);
+    await new Promise(r => setTimeout(r, 1200));
+    const { data: clientes } = await supabase
+      .from("users")
+      .select("*")
+      .eq("tipo", "cliente")
+      .not("nome", "is", null);
+    if (!clientes || clientes.length === 0) { setScanning(false); return; }
+    const c = clientes[Math.floor(Math.random() * clientes.length)];
+    const dados = { _uid: c.id };
+    FIELDS.forEach(f => { if ((c.compartilhar?.[f.key] ?? true) && c[f.key]) dados[f.key] = c[f.key]; });
+    setScanResult(dados);
+    setScanning(false);
   };
 
-  const salvarRegistro = () => {
-    const novo = { ...scanResult, id: `r${Date.now()}`, _ts: new Date().toISOString() };
-    const updated = [novo, ...records];
-    DB.saveRecords(user.id, updated);
-    setRecords(updated);
-    setSavedScan(true);
-    setTimeout(() => { setSavedScan(false); setScanResult(null); setNav("clientes"); }, 1500);
+  const salvarRegistro = async () => {
+    const novo = {
+      id: `r${Date.now()}`,
+      empresa_id: user.id,
+      ...Object.fromEntries(Object.entries(scanResult).filter(([k]) => !k.startsWith("_"))),
+      criado_em: new Date().toISOString(),
+    };
+    const { data } = await supabase.from("registros").insert([novo]).select().single();
+    if (data) {
+      setRecords(prev => [data, ...prev]);
+      setSavedScan(true);
+      setTimeout(() => { setSavedScan(false); setScanResult(null); setNav("clientes"); }, 1500);
+    }
   };
 
   const filtrados = records.filter(r => {
     if (!busca) return true;
     const q = busca.toLowerCase();
-    return (r.nome + " " + r.sobrenome + r.email + r.cpf + r.telefone).toLowerCase().includes(q);
+    return ((r.nome || "") + " " + (r.sobrenome || "") + (r.email || "") + (r.cpf || "") + (r.telefone || "")).toLowerCase().includes(q);
   });
 
-  const hoje = records.filter(r => new Date(r._ts).toDateString() === new Date().toDateString()).length;
-  const semana = records.filter(r => Date.now() - new Date(r._ts) < 7 * 86400000).length;
+  const hoje = records.filter(r => new Date(r.criado_em).toDateString() === new Date().toDateString()).length;
+  const semana = records.filter(r => Date.now() - new Date(r.criado_em) < 7 * 86400000).length;
   const cidades = [...new Set(records.map(r => r.cidade).filter(Boolean))].length;
 
   const NavItem = ({ id, icon, label }) => (
@@ -536,7 +518,7 @@ function EmpresaApp({ user, onLogout }) {
           <NavItem id="config" icon="settings" label="Configurações" />
         </div>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>{user.nomeEmpresa || user.email}</div>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>{user.nome_empresa || user.email}</div>
           <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>{user.segmento}</div>
           <button className="btn btn-ghost" style={{ marginTop: 10, width: "100%", fontSize: 12, padding: "7px 12px" }} onClick={onLogout}>
             <Icon name="logout" size={13} /> Sair
@@ -550,7 +532,7 @@ function EmpresaApp({ user, onLogout }) {
           {nav === "dashboard" && (
             <div className="fade-up">
               <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, marginBottom: 4 }}>Olá, {user.nomeEmpresa || "Empresa"}</h1>
+                <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, marginBottom: 4 }}>Olá, {user.nome_empresa || "Empresa"}</h1>
                 <div style={{ fontSize: 14, color: "var(--text2)" }}>{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 24 }}>
@@ -568,7 +550,9 @@ function EmpresaApp({ user, onLogout }) {
               </div>
               <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", fontWeight: 600, fontSize: 14 }}>Últimos cadastros</div>
-                {records.length === 0 ? (
+                {loading ? (
+                  <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>Carregando...</div>
+                ) : records.length === 0 ? (
                   <div style={{ padding: 32, textAlign: "center", color: "var(--text2)", fontSize: 14 }}>Nenhum cadastro ainda. Use o Scanner para começar.</div>
                 ) : (
                   <div className="table-scroll">
@@ -580,7 +564,7 @@ function EmpresaApp({ user, onLogout }) {
                             <td><div style={{ fontWeight: 500 }}>{r.nome} {r.sobrenome}</div><div style={{ fontSize: 11, color: "var(--text2)" }}>{r.email}</div></td>
                             <td>{r.cidade || "—"}</td>
                             <td>{r.telefone || "—"}</td>
-                            <td style={{ fontSize: 12, color: "var(--text2)" }}>{new Date(r._ts).toLocaleDateString("pt-BR")}</td>
+                            <td style={{ fontSize: 12, color: "var(--text2)" }}>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -657,12 +641,12 @@ function EmpresaApp({ user, onLogout }) {
                   <button className="btn btn-ghost" style={{ marginBottom: 16 }} onClick={() => setSelectedRecord(null)}>← Voltar</button>
                   <div className="card" style={{ padding: 24 }}>
                     <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, marginBottom: 4 }}>{selectedRecord.nome} {selectedRecord.sobrenome}</div>
-                    <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 20 }}>Cadastrado em {new Date(selectedRecord._ts).toLocaleString("pt-BR")}</div>
+                    <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 20 }}>Cadastrado em {new Date(selectedRecord.criado_em).toLocaleString("pt-BR")}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                      {Object.entries(selectedRecord).filter(([k]) => !k.startsWith("_") && k !== "id").map(([key, val]) => (
-                        <div key={key} style={{ background: "var(--surface2)", borderRadius: 8, padding: "12px 14px" }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text2)", marginBottom: 4 }}>{FIELDS.find(f => f.key === key)?.label || key}</div>
-                          <div style={{ fontSize: 14, fontWeight: 500 }}>{val}</div>
+                      {FIELDS.filter(f => selectedRecord[f.key]).map(f => (
+                        <div key={f.key} style={{ background: "var(--surface2)", borderRadius: 8, padding: "12px 14px" }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text2)", marginBottom: 4 }}>{f.label}</div>
+                          <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedRecord[f.key]}</div>
                         </div>
                       ))}
                     </div>
@@ -670,7 +654,9 @@ function EmpresaApp({ user, onLogout }) {
                 </div>
               ) : (
                 <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-                  {filtrados.length === 0 ? (
+                  {loading ? (
+                    <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>Carregando...</div>
+                  ) : filtrados.length === 0 ? (
                     <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>{busca ? "Nenhum resultado." : "Nenhum cliente ainda."}</div>
                   ) : (
                     <div className="table-scroll">
@@ -683,7 +669,7 @@ function EmpresaApp({ user, onLogout }) {
                               <td style={{ fontSize: 12, fontFamily: "monospace" }}>{r.cpf || "—"}</td>
                               <td style={{ fontSize: 12 }}>{r.telefone || "—"}</td>
                               <td style={{ fontSize: 12 }}>{r.cidade || "—"}</td>
-                              <td style={{ fontSize: 11, color: "var(--text2)" }}>{new Date(r._ts).toLocaleDateString("pt-BR")}</td>
+                              <td style={{ fontSize: 11, color: "var(--text2)" }}>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                               <td><Icon name="arrow" size={14} /></td>
                             </tr>
                           ))}
@@ -700,7 +686,7 @@ function EmpresaApp({ user, onLogout }) {
             <div className="fade-up" style={{ maxWidth: 480 }}>
               <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, marginBottom: 24 }}>Configurações</h1>
               <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-                <div><label className="label">Nome da empresa</label><input className="input" defaultValue={user.nomeEmpresa} /></div>
+                <div><label className="label">Nome da empresa</label><input className="input" defaultValue={user.nome_empresa} /></div>
                 <div><label className="label">CNPJ</label><input className="input" defaultValue={user.cnpj} /></div>
                 <div>
                   <label className="label">Segmento</label>
@@ -733,26 +719,17 @@ export default function App() {
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    seedDemo();
-    const session = DB.getSession();
+    const session = Session.get();
     if (session) setUser(session);
     setBooting(false);
   }, []);
 
   const handleLogin = (u) => setUser(u);
-
-  const handleLogout = () => {
-    DB.clearSession();
-    setUser(null);
-  };
-
-  const handleUpdateUser = (u) => {
-    DB.saveSession(u);
-    setUser(u);
-  };
+  const handleLogout = () => { Session.clear(); setUser(null); };
+  const handleUpdateUser = (u) => { Session.save(u); setUser(u); };
 
   if (booting) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f2ec", fontFamily: "serif" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f2ec" }}>
       <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 32 }}>Ficha<span style={{ color: "#c8401a" }}>ID</span></div>
     </div>
   );
