@@ -1,27 +1,58 @@
 import { useEffect, useRef } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
-export default function Scanner({ onResult, onClose }) {
-  const started = useRef(false);
+export default function Scanner(props) {
+  var onResult = props.onResult;
+  var onClose = props.onClose;
+  var onError = props.onError;
+  var started = useRef(false);
 
-  useEffect(() => {
+  useEffect(function() {
     if (started.current) return;
     started.current = true;
-    const scanner = new Html5Qrcode("qr-reader");
+    var scanner = new Html5Qrcode("qr-reader");
+
     scanner.start(
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       function(decodedText) {
+        started.current = false;
         scanner.stop().catch(function() {}).finally(function() {
           onResult(decodedText);
         });
       },
       function() {}
-    ).catch(function() {});
+    ).catch(function(err) {
+      started.current = false;
+      if (onError) onError(err);
+    });
+
     return function() {
-      scanner.stop().catch(function() {});
+      if (started.current) {
+        started.current = false;
+        scanner.stop().catch(function() {});
+      }
     };
-  }, [onResult]);
+  }, [onResult, onError]);
+
+  function handleClose() {
+    if (started.current) {
+      started.current = false;
+      var el = document.getElementById("qr-reader");
+      if (el) {
+        try {
+          var instance = new Html5Qrcode("qr-reader");
+          instance.stop().catch(function() {}).finally(onClose);
+        } catch(e) {
+          onClose();
+        }
+      } else {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  }
 
   return (
     <div style={{

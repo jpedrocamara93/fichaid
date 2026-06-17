@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import Scanner from "./Scanner";
- 
+
 // ─── CONSTANTS ─────────────────────────────────────────────────────────────────
 const FIELDS = [
   { key: "nome", label: "Nome", required: true },
@@ -17,16 +16,16 @@ const FIELDS = [
   { key: "cidade", label: "Cidade" },
   { key: "estado", label: "Estado" },
 ];
- 
+
 const SEGMENTOS = ["hotel", "loja", "hospital", "clinica", "academia", "restaurante", "outro"];
- 
+
 // ─── SESSION (somente auth - sem dados pessoais) ───────────────────────────────
 const Session = {
   get() { try { return JSON.parse(localStorage.getItem("fid_session")); } catch { return null; } },
   save(u) { localStorage.setItem("fid_session", JSON.stringify(u)); },
   clear() { localStorage.removeItem("fid_session"); },
 };
- 
+
 // ─── PERFIL LOCAL (dados pessoais ficam so no dispositivo do cliente) ──────────
 const PerfilLocal = {
   get(userId) { try { return JSON.parse(localStorage.getItem("fid_perfil_" + userId)) || {}; } catch { return {}; } },
@@ -36,7 +35,7 @@ const PerfilLocal = {
   },
   saveCompartilhar(userId, c) { localStorage.setItem("fid_compartilhar_" + userId, JSON.stringify(c)); },
 };
- 
+
 // ─── QR REAL ──────────────────────────────────────────────────────────────────
 function RealQR({ data, size }) {
   var ref = useRef();
@@ -53,7 +52,7 @@ function RealQR({ data, size }) {
         height: size || 200,
         colorDark: "#1a1714",
         colorLight: "#ffffff",
-        correctLevel: window.QRCode.CorrectLevel.M,
+        correctLevel: window.QRCode.CorrectLevel.L,
       });
     };
     document.head.appendChild(script);
@@ -63,10 +62,10 @@ function RealQR({ data, size }) {
   }, [data, size]);
   return <div ref={ref} style={{ borderRadius: 6, overflow: "hidden", display: "inline-block" }} />;
 }
- 
+
 // ─── STYLES ────────────────────────────────────────────────────────────────────
-var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600&display=swap');\n*{box-sizing:border-box;margin:0;padding:0;}\n:root{\n  --bg:#f5f2ec;--surface:#fff;--surface2:#f0ede6;--border:#e0dbd0;\n  --text:#1a1714;--text2:#6b6560;--text3:#a09890;\n  --accent:#1a1714;--accent2:#c8401a;--green:#1a6b3a;\n  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);\n}\nbody{background:var(--bg);font-family:'Geist',sans-serif;color:var(--text);}\n::-webkit-scrollbar{width:4px;}\n::-webkit-scrollbar-track{background:var(--bg);}\n::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}\n.input{width:100%;background:var(--surface);border:1.5px solid var(--border);\n  color:var(--text);padding:10px 14px;font-family:'Geist',sans-serif;font-size:13px;\n  border-radius:6px;outline:none;transition:border-color .15s;}\n.input:focus{border-color:var(--accent);}\n.input::placeholder{color:var(--text3);}\nselect.input{cursor:pointer;}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;\n  padding:10px 20px;border-radius:6px;font-family:'Geist',sans-serif;\n  font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;letter-spacing:.01em;}\n.btn-dark{background:var(--accent);color:#fff;}\n.btn-dark:hover{background:#2d2926;}\n.btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border);}\n.btn-ghost:hover{border-color:var(--accent);background:var(--surface);}\n.btn:disabled{opacity:.4;cursor:not-allowed;}\n.btn-full{width:100%;}\n.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}\n.label{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;\n  color:var(--text2);margin-bottom:5px;display:block;}\n.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;}\n.badge-green{background:#e8f5ee;color:var(--green);}\n.badge-orange{background:#fef3e8;color:#b05a10;}\n.badge-gray{background:var(--surface2);color:var(--text2);}\n.toggle-row{display:flex;align-items:center;gap:10px;padding:9px 12px;\n  border-radius:6px;border:1.5px solid var(--border);background:var(--surface);\n  cursor:pointer;transition:all .15s;user-select:none;}\n.toggle-row.on{border-color:#1a6b3a30;background:#f0f8f3;}\n.toggle-row:hover{border-color:var(--accent);}\n.pill{width:34px;height:18px;border-radius:9px;background:var(--border);\n  position:relative;transition:background .2s;flex-shrink:0;}\n.pill.on{background:var(--green);}\n.pill::after{content:'';width:12px;height:12px;border-radius:50%;background:#fff;\n  position:absolute;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}\n.pill.on::after{left:19px;}\n.tab-bar{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}\n.tab{flex:1;padding:12px 8px;background:transparent;border:none;\n  font-family:'Geist',sans-serif;font-size:12px;font-weight:500;letter-spacing:.04em;\n  text-transform:uppercase;color:var(--text2);cursor:pointer;transition:all .15s;\n  border-bottom:2px solid transparent;margin-bottom:-1px;}\n.tab.active{color:var(--accent);border-bottom-color:var(--accent);}\n.tab:hover:not(.active){color:var(--text);}\n.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;box-shadow:var(--shadow);}\n.table{width:100%;border-collapse:collapse;}\n.table th{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;\n  color:var(--text2);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);}\n.table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--surface2);vertical-align:middle;}\n.table tr:hover td{background:var(--surface2);}\n.table tr:last-child td{border-bottom:none;}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}\n@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}\n.fade-up{animation:fadeUp .3s ease;}\n.fade-in{animation:fadeIn .2s ease;}\n.scan-zone{border:2px dashed var(--border);border-radius:12px;padding:48px 24px;\n  text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);}\n.scan-zone:hover{border-color:var(--accent);background:var(--surface);}\n.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);\n  min-height:100vh;display:flex;flex-direction:column;}\n.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;\n  font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;\n  transition:all .15s;border-radius:6px;margin:1px 8px;}\n.nav-item:hover{background:var(--surface2);color:var(--text);}\n.nav-item.active{background:var(--accent);color:#fff;}\n@media(max-width:640px){\n  .sidebar{display:none;}\n  .table-scroll{overflow-x:auto;}\n}\n";
- 
+var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600&display=swap');\n*{box-sizing:border-box;margin:0;padding:0;}\n:root{\n  --bg:#f5f2ec;--surface:#fff;--surface2:#f0ede6;--border:#e0dbd0;\n  --text:#1a1714;--text2:#6b6560;--text3:#a09890;\n  --accent:#1a1714;--accent2:#c8401a;--green:#1a6b3a;\n  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);\n}\nbody{background:var(--bg);font-family:'Geist',sans-serif;color:var(--text);}\n::-webkit-scrollbar{width:4px;}\n::-webkit-scrollbar-track{background:var(--bg);}\n::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}\n.input{width:100%;background:var(--surface);border:1.5px solid var(--border);\n  color:var(--text);padding:10px 14px;font-family:'Geist',sans-serif;font-size:13px;\n  border-radius:6px;outline:none;transition:border-color .15s;}\n.input:focus{border-color:var(--accent);}\n.input::placeholder{color:var(--text3);}\nselect.input{cursor:pointer;}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;\n  padding:10px 20px;border-radius:6px;font-family:'Geist',sans-serif;\n  font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;letter-spacing:.01em;}\n.btn-dark{background:var(--accent);color:#fff;}\n.btn-dark:hover{background:#2d2926;}\n.btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border);}\n.btn-ghost:hover{border-color:var(--accent);background:var(--surface);}\n.btn:disabled{opacity:.4;cursor:not-allowed;}\n.btn-full{width:100%;}\n.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}\n.label{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;\n  color:var(--text2);margin-bottom:5px;display:block;}\n.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;}\n.badge-green{background:#e8f5ee;color:var(--green);}\n.badge-orange{background:#fef3e8;color:#b05a10;}\n.badge-gray{background:var(--surface2);color:var(--text2);}\n.toggle-row{display:flex;align-items:center;gap:10px;padding:9px 12px;\n  border-radius:6px;border:1.5px solid var(--border);background:var(--surface);\n  cursor:pointer;transition:all .15s;user-select:none;}\n.toggle-row.on{border-color:#1a6b3a30;background:#f0f8f3;}\n.toggle-row:hover{border-color:var(--accent);}\n.pill{width:34px;height:18px;border-radius:9px;background:var(--border);\n  position:relative;transition:background .2s;flex-shrink:0;}\n.pill.on{background:var(--green);}\n.pill::after{content:'';width:12px;height:12px;border-radius:50%;background:#fff;\n  position:absolute;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}\n.pill.on::after{left:19px;}\n.tab-bar{display:flex;border-bottom:1px solid var(--border);background:var(--surface);}\n.tab{flex:1;padding:12px 8px;background:transparent;border:none;\n  font-family:'Geist',sans-serif;font-size:12px;font-weight:500;letter-spacing:.04em;\n  text-transform:uppercase;color:var(--text2);cursor:pointer;transition:all .15s;\n  border-bottom:2px solid transparent;margin-bottom:-1px;}\n.tab.active{color:var(--accent);border-bottom-color:var(--accent);}\n.tab:hover:not(.active){color:var(--text);}\n.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;box-shadow:var(--shadow);}\n.table{width:100%;border-collapse:collapse;}\n.table th{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;\n  color:var(--text2);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}\n.table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--surface2);vertical-align:middle;white-space:nowrap;}\n.table tr:hover td{background:var(--surface2);}\n.table tr:last-child td{border-bottom:none;}\n.table td.empty{color:var(--text3);font-style:italic;}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}\n@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}\n.fade-up{animation:fadeUp .3s ease;}\n.fade-in{animation:fadeIn .2s ease;}\n.scan-zone{border:2px dashed var(--border);border-radius:12px;padding:48px 24px;\n  text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);}\n.scan-zone:hover{border-color:var(--accent);background:var(--surface);}\n.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);\n  min-height:100vh;display:flex;flex-direction:column;}\n.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;\n  font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;\n  transition:all .15s;border-radius:6px;margin:1px 8px;}\n.nav-item:hover{background:var(--surface2);color:var(--text);}\n.nav-item.active{background:var(--accent);color:#fff;}\n.float-actions{position:fixed;bottom:24px;right:24px;display:flex;gap:10px;z-index:500;background:var(--surface);padding:12px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.12);border:1px solid var(--border);}\n@media(max-width:640px){\n  .sidebar{display:none;}\n  .table-scroll{overflow-x:auto;}\n  .float-actions{left:16px;right:16px;bottom:16px;}\n}\n";
+
 // ─── ICONS ─────────────────────────────────────────────────────────────────────
 function Icon(props) {
   var name = props.name;
@@ -86,6 +85,9 @@ function Icon(props) {
     shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
     camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></>,
     lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+    download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
+    x: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
+    table: <><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -93,7 +95,7 @@ function Icon(props) {
     </svg>
   );
 }
- 
+
 // ─── AUTH SCREEN ───────────────────────────────────────────────────────────────
 function AuthScreen(props) {
   var onLogin = props.onLogin;
@@ -103,7 +105,7 @@ function AuthScreen(props) {
   var [error, setError] = useState("");
   var [loading, setLoading] = useState(false);
   function set(k, v) { setForm(function(f) { return Object.assign({}, f, { [k]: v }); }); }
- 
+
   async function handleLogin() {
     setLoading(true); setError("");
     var result = await supabase.from("users").select("*").eq("email", form.email).eq("senha", form.senha).single();
@@ -111,7 +113,7 @@ function AuthScreen(props) {
     Session.save(result.data);
     onLogin(result.data);
   }
- 
+
   async function handleRegister() {
     setLoading(true); setError("");
     if (!form.email || !form.senha) { setError("Preencha e-mail e senha."); setLoading(false); return; }
@@ -129,7 +131,7 @@ function AuthScreen(props) {
     Session.save(result.data);
     onLogin(result.data);
   }
- 
+
   if (mode === "login") return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "var(--bg)" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
@@ -149,7 +151,7 @@ function AuthScreen(props) {
       </div>
     </div>
   );
- 
+
   if (mode === "choose") return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 440 }}>
@@ -178,7 +180,7 @@ function AuthScreen(props) {
       </div>
     </div>
   );
- 
+
   if (mode === "register") return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
@@ -218,10 +220,10 @@ function AuthScreen(props) {
       </div>
     </div>
   );
- 
+
   return null;
 }
- 
+
 // ─── CLIENTE APP ───────────────────────────────────────────────────────────────
 function ClienteApp(props) {
   var user = props.user;
@@ -233,23 +235,27 @@ function ClienteApp(props) {
   );
   var [qrData, setQrData] = useState(null);
   var [saved, setSaved] = useState(false);
- 
+
   var camposShared = FIELDS.filter(function(f) { return compartilhar[f.key] && perfil[f.key]; });
- 
+
   function salvar() {
     PerfilLocal.save(user.id, perfil);
     PerfilLocal.saveCompartilhar(user.id, compartilhar);
     setSaved(true);
     setTimeout(function() { setSaved(false); }, 2000);
   }
- 
+
   function gerarQR() {
-    var dados = { _uid: user.id, _ts: Date.now() };
-    FIELDS.forEach(function(f) { if (compartilhar[f.key] && perfil[f.key]) dados[f.key] = perfil[f.key]; });
+    var dados = { u: user.id };
+    FIELDS.forEach(function(f) {
+      if (compartilhar[f.key] && perfil[f.key]) {
+        dados[f.key] = perfil[f.key];
+      }
+    });
     setQrData(JSON.stringify(dados));
     setTab("qr");
   }
- 
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
       <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
@@ -261,7 +267,7 @@ function ClienteApp(props) {
           <button className="btn btn-ghost" style={{ padding: "6px 12px", fontSize: 12 }} onClick={onLogout}><Icon name="logout" size={14} /> Sair</button>
         </div>
       </div>
- 
+
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px" }}>
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="tab-bar">
@@ -270,7 +276,7 @@ function ClienteApp(props) {
             })}
           </div>
           <div style={{ padding: 24 }}>
- 
+
             {tab === "perfil" && (
               <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ background: "#e8f5ee", border: "1px solid #c0e0cc", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "var(--green)", lineHeight: 1.5 }}>
@@ -307,7 +313,7 @@ function ClienteApp(props) {
                 </div>
               </div>
             )}
- 
+
             {tab === "qr" && (
               <div className="fade-up" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
                 {!qrData ? (
@@ -335,7 +341,7 @@ function ClienteApp(props) {
                 )}
               </div>
             )}
- 
+
             {tab === "privacidade" && (
               <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>Controle de privacidade</div>
@@ -352,14 +358,38 @@ function ClienteApp(props) {
                 <button className="btn btn-dark btn-full" style={{ marginTop: 8 }} onClick={function() { salvar(); gerarQR(); }}>Salvar e atualizar QR</button>
               </div>
             )}
- 
+
           </div>
         </div>
       </div>
     </div>
   );
 }
- 
+
+// ─── EXPORT CSV ────────────────────────────────────────────────────────────────
+function exportarCSV(records) {
+  var headers = FIELDS.map(function(f) { return f.label; });
+  headers.push("Data de cadastro");
+  var rows = records.map(function(r) {
+    var row = FIELDS.map(function(f) {
+      var val = r[f.key];
+      return val ? '"' + String(val).replace(/"/g, '""') + '"' : '"Nao disponivel"';
+    });
+    row.push('"' + new Date(r.criado_em).toLocaleString("pt-BR") + '"');
+    return row.join(",");
+  });
+  var csv = headers.map(function(h) { return '"' + h + '"'; }).join(",") + "\n" + rows.join("\n");
+  var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "clientes_fichaid_" + new Date().toISOString().slice(0, 10) + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ─── EMPRESA APP ───────────────────────────────────────────────────────────────
 function EmpresaApp(props) {
   var user = props.user;
@@ -368,28 +398,38 @@ function EmpresaApp(props) {
   var [records, setRecords] = useState([]);
   var [showScanner, setShowScanner] = useState(false);
   var [scanResult, setScanResult] = useState(null);
+  var [scanError, setScanError] = useState(null);
   var [savedScan, setSavedScan] = useState(false);
   var [busca, setBusca] = useState("");
   var [selectedRecord, setSelectedRecord] = useState(null);
   var [loading, setLoading] = useState(true);
- 
+
   useEffect(function() {
     supabase.from("registros").select("*").eq("empresa_id", user.id)
       .order("criado_em", { ascending: false })
       .then(function(result) { setRecords(result.data || []); setLoading(false); });
   }, [user.id]);
- 
+
   function handleScanResult(raw) {
     setShowScanner(false);
+    setScanError(null);
     try {
       var dados = JSON.parse(raw);
+      if (!dados || typeof dados !== "object") throw new Error("formato invalido");
       setScanResult(dados);
       setNav("scanner");
     } catch(e) {
-      alert("QR code invalido.");
+      setScanError("Este QR code nao parece ser do FichaID, ou os dados estao corrompidos. Tente escanear novamente.");
+      setNav("scanner");
     }
   }
- 
+
+  function handleScanError(err) {
+    setShowScanner(false);
+    setScanError("Nao foi possivel acessar a camera. Verifique se você concedeu permissao de camera ao navegador.");
+    setNav("scanner");
+  }
+
   async function salvarRegistro() {
     var novo = { id: "r" + Date.now(), empresa_id: user.id, criado_em: new Date().toISOString() };
     FIELDS.forEach(function(f) { if (scanResult[f.key]) novo[f.key] = scanResult[f.key]; });
@@ -397,20 +437,25 @@ function EmpresaApp(props) {
     if (result.data) {
       setRecords(function(prev) { return [result.data].concat(prev); });
       setSavedScan(true);
-      setTimeout(function() { setSavedScan(false); setScanResult(null); setNav("clientes"); }, 1500);
+      setTimeout(function() { setSavedScan(false); setScanResult(null); setNav("dashboard"); }, 1200);
     }
   }
- 
+
+  function cancelarScan() {
+    setScanResult(null);
+    setScanError(null);
+  }
+
   var filtrados = records.filter(function(r) {
     if (!busca) return true;
     var q = busca.toLowerCase();
     return ((r.nome || "") + " " + (r.sobrenome || "") + (r.email || "") + (r.cpf || "") + (r.telefone || "")).toLowerCase().includes(q);
   });
- 
+
   var hoje = records.filter(function(r) { return new Date(r.criado_em).toDateString() === new Date().toDateString(); }).length;
   var semana = records.filter(function(r) { return Date.now() - new Date(r.criado_em) < 7 * 86400000; }).length;
   var cidades = [...new Set(records.map(function(r) { return r.cidade; }).filter(Boolean))].length;
- 
+
   function NavItem(p) {
     return (
       <div className={"nav-item" + (nav === p.id ? " active" : "")} onClick={function() { setNav(p.id); }}>
@@ -418,11 +463,11 @@ function EmpresaApp(props) {
       </div>
     );
   }
- 
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: "var(--bg)" }}>
-      {showScanner && <Scanner onResult={handleScanResult} onClose={function() { setShowScanner(false); }} />}
- 
+      {showScanner && <Scanner onResult={handleScanResult} onError={handleScanError} onClose={function() { setShowScanner(false); }} />}
+
       <div className="sidebar">
         <div style={{ padding: "20px 16px 12px" }}>
           <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22 }}>Ficha<span style={{ color: "var(--accent2)" }}>ID</span></div>
@@ -431,7 +476,7 @@ function EmpresaApp(props) {
         <div style={{ padding: "8px 0", flex: 1 }}>
           <NavItem id="dashboard" icon="chart" label="Dashboard" />
           <NavItem id="scanner" icon="scan" label="Scanner QR" />
-          <NavItem id="clientes" icon="users" label="Clientes" />
+          <NavItem id="clientes" icon="table" label="Todos os Clientes" />
           <NavItem id="config" icon="settings" label="Configuracoes" />
         </div>
         <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
@@ -440,10 +485,10 @@ function EmpresaApp(props) {
           <button className="btn btn-ghost" style={{ marginTop: 10, width: "100%", fontSize: 12, padding: "7px 12px" }} onClick={onLogout}><Icon name="logout" size={13} /> Sair</button>
         </div>
       </div>
- 
+
       <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ padding: 28, maxWidth: 900 }}>
- 
+        <div style={{ padding: 28, maxWidth: 1100 }}>
+
           {nav === "dashboard" && (
             <div className="fade-up">
               <div style={{ marginBottom: 24 }}>
@@ -461,7 +506,10 @@ function EmpresaApp(props) {
                 })}
               </div>
               <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", fontWeight: 600, fontSize: 14 }}>Ultimos cadastros</div>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>Ultimos cadastros</div>
+                  <span style={{ fontSize: 12, color: "var(--accent)", cursor: "pointer", fontWeight: 500 }} onClick={function() { setNav("clientes"); }}>Ver todos →</span>
+                </div>
                 {loading ? (
                   <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>Carregando...</div>
                 ) : records.length === 0 ? (
@@ -475,7 +523,8 @@ function EmpresaApp(props) {
                           return (
                             <tr key={r.id} style={{ cursor: "pointer" }} onClick={function() { setSelectedRecord(r); setNav("clientes"); }}>
                               <td><div style={{ fontWeight: 500 }}>{r.nome} {r.sobrenome}</div><div style={{ fontSize: 11, color: "var(--text2)" }}>{r.email}</div></td>
-                              <td>{r.cidade || "—"}</td><td>{r.telefone || "—"}</td>
+                              <td className={!r.cidade ? "empty" : ""}>{r.cidade || "Nao disponivel"}</td>
+                              <td className={!r.telefone ? "empty" : ""}>{r.telefone || "Nao disponivel"}</td>
                               <td style={{ fontSize: 12, color: "var(--text2)" }}>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                             </tr>
                           );
@@ -488,14 +537,21 @@ function EmpresaApp(props) {
               <button className="btn btn-dark" onClick={function() { setShowScanner(true); }}><Icon name="camera" size={14} /> Escanear cliente</button>
             </div>
           )}
- 
+
           {nav === "scanner" && (
             <div className="fade-up" style={{ maxWidth: 480 }}>
               <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, marginBottom: 4 }}>Scanner QR</h1>
               <div style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24 }}>Leia o QR code do cliente para cadastra-lo automaticamente.</div>
+
+              {scanError && (
+                <div style={{ background: "#fef2f0", border: "1px solid #f8d5cd", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "var(--accent2)", marginBottom: 16 }}>
+                  {scanError}
+                </div>
+              )}
+
               {!scanResult ? (
                 <div>
-                  <div className="scan-zone" onClick={function() { setShowScanner(true); }}>
+                  <div className="scan-zone" onClick={function() { setScanError(null); setShowScanner(true); }}>
                     <div style={{ marginBottom: 12, color: "var(--text2)" }}><Icon name="camera" size={36} /></div>
                     <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Abrir camera</div>
                     <div style={{ fontSize: 13, color: "var(--text2)" }}>Aponte para o QR code do cliente</div>
@@ -505,60 +561,64 @@ function EmpresaApp(props) {
                 <div className="fade-up">
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, padding: "12px 16px", background: "#e8f5ee", borderRadius: 8, border: "1px solid #c0e0cc" }}>
                     <Icon name="check" size={16} />
-                    <div><div style={{ fontWeight: 600, fontSize: 13 }}>QR lido com sucesso</div><div style={{ fontSize: 11, color: "var(--green)" }}>{Object.keys(scanResult).filter(function(k) { return !k.startsWith("_"); }).length} campos recebidos</div></div>
+                    <div><div style={{ fontWeight: 600, fontSize: 13 }}>QR lido com sucesso</div><div style={{ fontSize: 11, color: "var(--green)" }}>{Object.keys(scanResult).filter(function(k) { return k !== "u"; }).length} campos recebidos</div></div>
                   </div>
-                  <div className="card" style={{ padding: 20, marginBottom: 16 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Dados do cliente</div>
+                  <div className="card" style={{ padding: 20, marginBottom: 90 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Dados compartilhados pelo cliente</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {Object.entries(scanResult).filter(function(e) { return !e[0].startsWith("_"); }).map(function(entry) {
-                        var field = FIELDS.find(function(f) { return f.key === entry[0]; });
+                      {FIELDS.map(function(f) {
+                        var val = scanResult[f.key];
                         return (
-                          <div key={entry[0]} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--surface2)" }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--text2)" }}>{field ? field.label : entry[0]}</span>
-                            <span style={{ fontSize: 13, fontWeight: 500 }}>{entry[1]}</span>
+                          <div key={f.key} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1px solid var(--surface2)" }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--text2)" }}>{f.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: val ? "var(--text)" : "var(--text3)", fontStyle: val ? "normal" : "italic" }}>{val || "Nao disponivel"}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
+
                   {savedScan ? (
                     <div style={{ padding: "14px 20px", background: "#e8f5ee", borderRadius: 8, textAlign: "center", fontWeight: 600, color: "var(--green)" }}>Salvo no CRM!</div>
                   ) : (
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <button className="btn btn-ghost" style={{ flex: 1 }} onClick={function() { setScanResult(null); }}>Cancelar</button>
-                      <button className="btn btn-dark" style={{ flex: 2 }} onClick={salvarRegistro}>Salvar no CRM</button>
+                    <div className="float-actions">
+                      <button className="btn btn-ghost" onClick={cancelarScan}><Icon name="x" size={14} /> Cancelar</button>
+                      <button className="btn btn-dark" onClick={salvarRegistro}><Icon name="check" size={14} /> Salvar</button>
                     </div>
                   )}
                 </div>
               )}
             </div>
           )}
- 
+
           {nav === "clientes" && (
             <div className="fade-up">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28 }}>Clientes</h1>
+                  <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28 }}>Todos os Clientes</h1>
                   <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} cadastrados</div>
                 </div>
-                <button className="btn btn-dark" onClick={function() { setShowScanner(true); }}><Icon name="camera" size={14} /> Escanear</button>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button className="btn btn-ghost" onClick={function() { exportarCSV(records); }} disabled={records.length === 0}>
+                    <Icon name="download" size={14} /> Exportar .csv
+                  </button>
+                  <button className="btn btn-dark" onClick={function() { setShowScanner(true); }}><Icon name="camera" size={14} /> Escanear</button>
+                </div>
               </div>
-              <div style={{ position: "relative", marginBottom: 16 }}>
-                <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text3)" }}><Icon name="search" size={14} /></div>
-                <input className="input" style={{ paddingLeft: 36 }} placeholder="Buscar por nome, e-mail, CPF..." value={busca} onChange={function(e) { setBusca(e.target.value); }} />
-              </div>
+
               {selectedRecord ? (
                 <div className="fade-up">
-                  <button className="btn btn-ghost" style={{ marginBottom: 16 }} onClick={function() { setSelectedRecord(null); }}>Voltar</button>
+                  <button className="btn btn-ghost" style={{ marginBottom: 16 }} onClick={function() { setSelectedRecord(null); }}>Voltar para a tabela</button>
                   <div className="card" style={{ padding: 24 }}>
                     <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, marginBottom: 4 }}>{selectedRecord.nome} {selectedRecord.sobrenome}</div>
                     <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 20 }}>Cadastrado em {new Date(selectedRecord.criado_em).toLocaleString("pt-BR")}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                      {FIELDS.filter(function(f) { return selectedRecord[f.key]; }).map(function(f) {
+                      {FIELDS.map(function(f) {
+                        var val = selectedRecord[f.key];
                         return (
                           <div key={f.key} style={{ background: "var(--surface2)", borderRadius: 8, padding: "12px 14px" }}>
                             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text2)", marginBottom: 4 }}>{f.label}</div>
-                            <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedRecord[f.key]}</div>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: val ? "var(--text)" : "var(--text3)", fontStyle: val ? "normal" : "italic" }}>{val || "Nao disponivel"}</div>
                           </div>
                         );
                       })}
@@ -566,37 +626,47 @@ function EmpresaApp(props) {
                   </div>
                 </div>
               ) : (
-                <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-                  {loading ? (
-                    <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>Carregando...</div>
-                  ) : filtrados.length === 0 ? (
-                    <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>{busca ? "Nenhum resultado." : "Nenhum cliente ainda."}</div>
-                  ) : (
-                    <div className="table-scroll">
-                      <table className="table">
-                        <thead><tr><th>Cliente</th><th>CPF</th><th>Telefone</th><th>Cidade</th><th>Data</th><th></th></tr></thead>
-                        <tbody>
-                          {filtrados.map(function(r) {
-                            return (
-                              <tr key={r.id} style={{ cursor: "pointer" }} onClick={function() { setSelectedRecord(r); }}>
-                                <td><div style={{ fontWeight: 500 }}>{r.nome} {r.sobrenome}</div><div style={{ fontSize: 11, color: "var(--text2)" }}>{r.email}</div></td>
-                                <td style={{ fontSize: 12, fontFamily: "monospace" }}>{r.cpf || "—"}</td>
-                                <td style={{ fontSize: 12 }}>{r.telefone || "—"}</td>
-                                <td style={{ fontSize: 12 }}>{r.cidade || "—"}</td>
-                                <td style={{ fontSize: 11, color: "var(--text2)" }}>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
-                                <td><Icon name="arrow" size={14} /></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                <>
+                  <div style={{ position: "relative", marginBottom: 16 }}>
+                    <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text3)" }}><Icon name="search" size={14} /></div>
+                    <input className="input" style={{ paddingLeft: 36 }} placeholder="Buscar por nome, e-mail, CPF..." value={busca} onChange={function(e) { setBusca(e.target.value); }} />
+                  </div>
+                  <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                    {loading ? (
+                      <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>Carregando...</div>
+                    ) : filtrados.length === 0 ? (
+                      <div style={{ padding: 32, textAlign: "center", color: "var(--text2)" }}>{busca ? "Nenhum resultado." : "Nenhum cliente ainda."}</div>
+                    ) : (
+                      <div className="table-scroll">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              {FIELDS.map(function(f) { return <th key={f.key}>{f.label}</th>; })}
+                              <th>Cadastrado em</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filtrados.map(function(r) {
+                              return (
+                                <tr key={r.id} style={{ cursor: "pointer" }} onClick={function() { setSelectedRecord(r); }}>
+                                  {FIELDS.map(function(f) {
+                                    var val = r[f.key];
+                                    return <td key={f.key} className={!val ? "empty" : ""}>{val || "Nao disponivel"}</td>;
+                                  })}
+                                  <td style={{ color: "var(--text2)" }}>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
- 
+
           {nav === "config" && (
             <div className="fade-up" style={{ maxWidth: 480 }}>
               <h1 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, marginBottom: 24 }}>Configuracoes</h1>
@@ -621,33 +691,33 @@ function EmpresaApp(props) {
               </div>
             </div>
           )}
- 
+
         </div>
       </div>
     </div>
   );
 }
- 
+
 // ─── ROOT ──────────────────────────────────────────────────────────────────────
 export default function App() {
   var [user, setUser] = useState(null);
   var [booting, setBooting] = useState(true);
- 
+
   useEffect(function() {
     var session = Session.get();
     if (session) setUser(session);
     setBooting(false);
   }, []);
- 
+
   function handleLogin(u) { setUser(u); }
   function handleLogout() { Session.clear(); setUser(null); }
- 
+
   if (booting) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f2ec" }}>
       <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 32 }}>Ficha<span style={{ color: "#c8401a" }}>ID</span></div>
     </div>
   );
- 
+
   return (
     <>
       <style>{CSS}</style>
@@ -655,4 +725,3 @@ export default function App() {
     </>
   );
 }
- 
