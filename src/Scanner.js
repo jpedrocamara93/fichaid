@@ -76,7 +76,7 @@ export default function Scanner(props) {
         <div style={{ textAlign: "center", color: "#fff", fontSize: 13, marginBottom: 16, opacity: 0.7 }}>
           Aponte a camera para o QR code do cliente
         </div>
-        <button onClick={onClose} style={{
+        <button onClick={handleClose} style={{
           width: "100%",
           padding: "12px",
           background: "transparent",
